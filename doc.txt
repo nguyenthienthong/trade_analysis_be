@@ -1,0 +1,26 @@
+backend-ts/
+│
+├── src/
+│   ├── server.ts
+│   ├── app.ts
+│   │
+│   ├── config/
+│   │   └── database.ts
+│   │
+│   ├── models/
+│   │   └── user.model.ts
+│   │
+│   ├── routes/
+│   │   └── auth.route.ts
+│   │
+│   ├── controllers/
+│   │   └── auth.controller.ts
+│   │
+│   ├── services/
+│   │   └── auth.service.ts
+│   │
+│   └── middlewares/
+│       └── auth.middleware.ts
+│
+├── .env
+└── tsconfig.json
