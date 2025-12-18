@@ -1,3 +1,4 @@
+import { DataTypes } from "sequelize";
 import {
   Table,
   Column,
@@ -25,5 +26,12 @@ export class User extends Model {
     type: DataType.STRING,
     allowNull: false
   })
-  password!: string;
+  password_hash!: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  })
+  created_at!: Date;
 }

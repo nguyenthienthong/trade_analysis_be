@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { Table, Model, PrimaryKey, Default, DataType, Column } from "sequelize-typescript";
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -16,24 +15,4 @@ export default (req: AuthRequest, res: Response, next: NextFunction) => {
   } catch {
     res.sendStatus(403);
   }
-};@Table({ tableName: "users" })
-export class User extends Model {
-    @PrimaryKey
-    @Default(DataType.UUIDV4)
-    @Column(DataType.UUID)
-    declare id: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: false,
-        unique: true
-    })
-    email!: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: false
-    })
-    password!: string;
-}
-
+};
