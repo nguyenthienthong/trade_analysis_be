@@ -5,33 +5,34 @@ import {
   Model,
   DataType,
   PrimaryKey,
-  Default
+  Default,
+  IsEmail,
+  Unique,
+  CreatedAt
 } from "sequelize-typescript";
 
-@Table({ tableName: "users" })
+@Table({ tableName: "users",
+  underscored: true,
+  timestamps: true,
+})
 export class User extends Model {
   @PrimaryKey
   @Default(DataType.UUIDV4)
   @Column(DataType.UUID)
   id!: string;
 
-  @Column({
-    type: DataType.STRING,
-    allowNull: false,
-    unique: true
-  })
+  @Unique
+  @IsEmail
+  @Column(DataType.TEXT)
   email!: string;
 
-  @Column({
-    type: DataType.STRING,
-    allowNull: false
-  })
+  @Column(DataType.TEXT)
   password_hash!: string;
 
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  })
+  @Default('free')
+  @Column(DataType.TEXT)
+  plan!: string;
+
+  @CreatedAt
   created_at!: Date;
 }

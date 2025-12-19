@@ -5,8 +5,6 @@ import { User } from "../models/user.model";
 export const register = async (email: string, password: string) => {
   const hashed = await bcrypt.hash(password, 10);
 
-  console.log(hashed);
-  
   return User.create({ email, password_hash: hashed });
 };
 
