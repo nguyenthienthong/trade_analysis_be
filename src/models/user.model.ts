@@ -1,4 +1,3 @@
-import { DataTypes } from "sequelize";
 import {
   Table,
   Column,
@@ -8,13 +7,10 @@ import {
   Default,
   IsEmail,
   Unique,
-  CreatedAt
+  CreatedAt,
 } from "sequelize-typescript";
 
-@Table({ tableName: "users",
-  underscored: true,
-  timestamps: true,
-})
+@Table({ tableName: "users", underscored: true, timestamps: true })
 export class User extends Model {
   @PrimaryKey
   @Default(DataType.UUIDV4)
@@ -29,7 +25,7 @@ export class User extends Model {
   @Column(DataType.TEXT)
   password_hash!: string;
 
-  @Default('free')
+  @Default("free")
   @Column(DataType.TEXT)
   plan!: string;
 
