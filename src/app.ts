@@ -5,6 +5,7 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 import authRoute from "./routes/auth.route";
 import tradesRoute from "./routes/trade.route";
+import accountRoute from "./routes/account.route";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(morgan("dev"));
 
 app.use("/api/auth", authRoute);
 app.use("/api/trades", tradesRoute);
+app.use("/api/accounts", accountRoute);
 
 app.get("/health", (_, res) => {
   res.json({ status: "OK" });

@@ -6,28 +6,28 @@ export const swaggerSpec = swaggerJSDoc({
     info: {
       title: "Backend API",
       version: "1.0.0",
-      description: "Node.js + TypeScript + PostgreSQL API"
+      description: "Node.js + TypeScript + PostgreSQL API",
     },
     servers: [
       {
         url: "http://localhost:3001",
-        description: "Local server"
-      }
+        description: "Local server",
+      },
     ],
     components: {
       securitySchemes: {
         bearerAuth: {
           type: "http",
           scheme: "bearer",
-          bearerFormat: "JWT"
-        }
-      }
+          bearerFormat: "JWT",
+        },
+      },
     },
     security: [
       {
-        bearerAuth: []
-      }
-    ]
+        bearerAuth: [],
+      },
+    ],
   },
-  apis: ["./src/routes/*.ts"] // nơi viết swagger comment
+  apis: ["./src/routes/*.ts"], // nơi viết swagger comment
 });

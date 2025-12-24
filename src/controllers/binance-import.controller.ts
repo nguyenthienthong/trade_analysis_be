@@ -51,8 +51,6 @@ export const previewBinanceCsvController = async (
   req: AuthRequest,
   res: Response
 ) => {
-  console.log(req.file);
-
   try {
     if (!req.file) {
       return res.status(400).json({ message: "CSV file required" });
