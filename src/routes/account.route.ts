@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { createAccount } from "../controllers/account.controller";
+import {
+  createAccount,
+  getUserAccounts,
+} from "../controllers/account.controller";
 import authMiddleware from "../middlewares/auth.middleware";
 
 const router = Router();
@@ -47,5 +50,21 @@ const router = Router();
  *         description: Unauthorized
  */
 router.post("/", authMiddleware, createAccount);
+
+/**
+ * @swagger
+ * /api/accounts:
+ *   get:
+ *     summary: Get all trading accounts of the user
+ *     tags: [Accounts]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of connected accounts
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/", authMiddleware, getUserAccounts);
 
 export default router;

@@ -3,6 +3,7 @@ import {
   importBinanceCsvController,
   previewBinanceCsvController,
 } from "../controllers/binance-import.controller";
+import { getUserTrades } from "../controllers/trade.controller";
 import authMiddleware from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -48,7 +49,7 @@ router.post(
   "/import/binance",
   authMiddleware,
   upload.single("file"),
-  importBinanceCsvController
+  importBinanceCsvController,
 );
 
 /**
@@ -77,7 +78,23 @@ router.post(
   "/import/binance/preview",
   authMiddleware,
   upload.single("file"),
-  previewBinanceCsvController
+  previewBinanceCsvController,
 );
+
+/**
+ * @swagger
+ * /api/trades:
+ *   get:
+ *     summary: Get trade history of the user
+ *     tags: [Trades]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of trades
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/", authMiddleware, getUserTrades);
 
 export default router;

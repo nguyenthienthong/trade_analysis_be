@@ -13,3 +13,10 @@ export const createAccount = async (userId: string, data: CreateAccountDto) => {
     ...data,
   });
 };
+
+export const getUserAccounts = async (userId: string) => {
+  return await Account.findAll({
+    where: { user_id: userId },
+    order: [["created_at", "DESC"]],
+  });
+};
