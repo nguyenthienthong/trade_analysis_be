@@ -39,7 +39,7 @@ const router = Router();
  *                 type: string
  *               type:
  *                 type: string
- *               is_default:
+ *               isDefault:
  *                 type: boolean
  *     responses:
  *       201:

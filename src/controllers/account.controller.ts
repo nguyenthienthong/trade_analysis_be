@@ -27,7 +27,7 @@ export const getUserAccounts = async (req: Request, res: Response) => {
     }
 
     const accounts = await accountService.getUserAccounts(userId);
-    res.status(200).json(accounts);
+    res.status(200).json({ accounts });
   } catch (e: any) {
     res.status(400).json({ message: e.message });
   }

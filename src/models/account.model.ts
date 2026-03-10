@@ -36,7 +36,7 @@ export class Account extends Model {
 
   @Default(false)
   @Column(DataType.BOOLEAN)
-  is_default!: boolean;
+  isDefault!: boolean;
 
   @CreatedAt
   @Column(DataType.DATE) // Using DataType.DATE which maps to TIMESTAMP with timezone in Postgres by default usually, but let's stick to standard sequelizets
