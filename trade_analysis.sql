@@ -36,7 +36,7 @@ CREATE TABLE public.accounts (
     exchange text NOT NULL,
     name text,
     created_at timestamp without time zone DEFAULT now(),
-    "isDefault" boolean DEFAULT false,
+    "is_default" boolean DEFAULT false,
     type text DEFAULT 'binance'::text NOT NULL
 );
 
@@ -181,7 +181,7 @@ ALTER TABLE public.users OWNER TO postgres;
 -- Data for Name: accounts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.accounts (id, user_id, exchange, name, created_at, "isDefault", type) FROM stdin;
+COPY public.accounts (id, user_id, exchange, name, created_at, "is_default", type) FROM stdin;
 \.
 
 

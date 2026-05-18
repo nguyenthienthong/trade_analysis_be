@@ -4,7 +4,7 @@ interface CreateAccountDto {
   name: string;
   exchange: string;
   type: string;
-  isDefault?: boolean;
+  is_default?: boolean;
 }
 
 export const createAccount = async (userId: string, data: CreateAccountDto) => {
