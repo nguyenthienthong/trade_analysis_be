@@ -8,6 +8,7 @@ import tradesRoute from "./routes/trade.route";
 import accountRoute from "./routes/account.route";
 import analysisRoute from "./routes/analysis.route";
 import marketDataRoute from "./routes/market-data.route";
+import aiRoute from "./routes/ai.route";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/api/trades", tradesRoute);
 app.use("/api/accounts", accountRoute);
 app.use("/api/analysis", analysisRoute);
 app.use("/api/market-data", marketDataRoute);
+app.use("/api/ai", aiRoute);
 
 app.get("/health", (_, res) => {
   res.json({ status: "OK" });

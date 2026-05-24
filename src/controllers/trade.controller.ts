@@ -10,7 +10,20 @@ export const getUserTrades = async (req: Request, res: Response) => {
       return;
     }
 
-    const trades = await tradeService.getUserTrades(userId);
+    const { page, limit, symbol, accountId, startDate, endDate, sortBy, sortOrder } = req.query;
+
+    const trades = await tradeService.getUserTrades({
+      userId,
+      page: page ? parseInt(page as string, 10) : undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+      symbol: symbol as string,
+      accountId: accountId as string,
+      startDate: startDate as string,
+      endDate: endDate as string,
+      sortBy: sortBy as string,
+      sortOrder: sortOrder as 'ASC' | 'DESC',
+    });
+    
     res.status(200).json(trades);
   } catch (e: any) {
     res.status(400).json({ message: e.message });

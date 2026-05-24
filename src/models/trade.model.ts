@@ -7,7 +7,7 @@ import {
   Table,
 } from "sequelize-typescript";
 
-@Table({ tableName: "trades" })
+@Table({ tableName: "trades", underscored: true, timestamps: false })
 export class Trade extends Model {
   @PrimaryKey
   @Default(DataType.UUIDV4)
@@ -24,7 +24,7 @@ export class Trade extends Model {
   declare symbol: string;
 
   @Column(DataType.STRING)
-  declare side: "BUY" | "SELL";
+  declare side: "long" | "short";
 
   @Column(DataType.DECIMAL(18, 8))
   declare entryPrice: string;
