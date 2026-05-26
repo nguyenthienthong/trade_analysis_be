@@ -29,3 +29,42 @@ export const getUserTrades = async (req: Request, res: Response) => {
     res.status(400).json({ message: e.message });
   }
 };
+
+export const getTradeById = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const { id } = req.params;
+    const trade = await tradeService.getTradeById(userId, id);
+    if (!trade) {
+      res.status(404).json({ message: "Trade not found" });
+      return;
+    }
+
+    res.status(200).json(trade);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+export const updateTradeJournal = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const { id } = req.params;
+    const data = req.body;
+    const updatedTrade = await tradeService.updateTradeJournal(userId, id, data);
+    
+    res.status(200).json(updatedTrade);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};

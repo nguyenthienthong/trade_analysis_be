@@ -1,4 +1,7 @@
 import { Trade } from "../models/trade.model";
+import { TradeSetup } from "../models/trade-setup.model";
+import { Emotion } from "../models/emotion.model";
+import { Op } from "sequelize";
 
 export const getStatsOverview = async (userId: string) => {
   const trades = await Trade.findAll({ 
@@ -85,5 +88,395 @@ export const getEquityCurve = async (userId: string) => {
       { name: 'Wins', value: wins },
       { name: 'Losses', value: losses }
     ]
+  };
+};
+
+export const getAdvancedAnalytics = async (userId: string, startDate?: string, endDate?: string) => {
+  const whereClause: any = { userId };
+  if (startDate || endDate) {
+    whereClause.openTime = {};
+    if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
+    if (endDate) whereClause.openTime[Op.lte] = new Date(endDate);
+  }
+
+  const trades = await Trade.findAll({
+    where: whereClause,
+    include: [{ model: TradeSetup, as: 'setup' }],
+    order: [["openTime", "ASC"]],
+  });
+
+  const symbolStats: Record<string, { total: number, wins: number, pnl: number }> = {};
+  const setupStats: Record<string, { name: string, total: number, wins: number, pnl: number }> = {};
+  const hourlyStats: Record<number, { total: number, wins: number, pnl: number }> = {};
+  const dayStats: Record<number, { total: number, wins: number, pnl: number }> = {};
+
+  let currentLosingStreak = 0;
+  let maxLosingStreak = 0;
+  let totalLosingStreaks = 0;
+  let sumLosingStreaks = 0;
+  let inStreak = false;
+
+  trades.forEach(trade => {
+    const pnl = parseFloat(trade.pnl) - parseFloat(trade.fee);
+    const isWin = pnl > 0;
+    
+    if (!isWin) {
+      currentLosingStreak++;
+      if (!inStreak) {
+        inStreak = true;
+        totalLosingStreaks++;
+      }
+      sumLosingStreaks++;
+      if (currentLosingStreak > maxLosingStreak) {
+        maxLosingStreak = currentLosingStreak;
+      }
+    } else {
+      currentLosingStreak = 0;
+      inStreak = false;
+    }
+
+    const sym = trade.symbol;
+    if (!symbolStats[sym]) symbolStats[sym] = { total: 0, wins: 0, pnl: 0 };
+    symbolStats[sym].total++;
+    if (isWin) symbolStats[sym].wins++;
+    symbolStats[sym].pnl += pnl;
+
+    const setupName = trade.setup ? trade.setup.name : "Uncategorized";
+    if (!setupStats[setupName]) setupStats[setupName] = { name: setupName, total: 0, wins: 0, pnl: 0 };
+    setupStats[setupName].total++;
+    if (isWin) setupStats[setupName].wins++;
+    setupStats[setupName].pnl += pnl;
+
+    const hour = new Date(trade.openTime).getHours();
+    if (!hourlyStats[hour]) hourlyStats[hour] = { total: 0, wins: 0, pnl: 0 };
+    hourlyStats[hour].total++;
+    if (isWin) hourlyStats[hour].wins++;
+    hourlyStats[hour].pnl += pnl;
+
+    const day = new Date(trade.openTime).getDay();
+    if (!dayStats[day]) dayStats[day] = { total: 0, wins: 0, pnl: 0 };
+    dayStats[day].total++;
+    if (isWin) dayStats[day].wins++;
+    dayStats[day].pnl += pnl;
+  });
+
+  const avgLosingStreak = totalLosingStreaks > 0 ? (sumLosingStreaks / totalLosingStreaks) : 0;
+
+  const formatStats = (stats: any, keyName: string, mapKey?: (k: string) => string) => {
+    return Object.keys(stats).map(k => {
+      const s = stats[k];
+      return {
+        [keyName]: mapKey ? mapKey(k) : k,
+        totalTrades: s.total,
+        winRate: (s.wins / s.total) * 100,
+        pnl: s.pnl
+      };
+    }).sort((a: any, b: any) => b.totalTrades - a.totalTrades);
+  };
+
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  return {
+    symbolPerformance: formatStats(symbolStats, 'symbol'),
+    setupPerformance: Object.values(setupStats).map(s => ({
+      setup: s.name,
+      totalTrades: s.total,
+      winRate: (s.wins / s.total) * 100,
+      pnl: s.pnl
+    })).sort((a: any, b: any) => b.totalTrades - a.totalTrades),
+    hourlyPerformance: formatStats(hourlyStats, 'hour').sort((a: any, b: any) => parseInt(a.hour) - parseInt(b.hour)),
+    dayOfWeekPerformance: formatStats(dayStats, 'day', k => dayNames[parseInt(k)]),
+    streaks: {
+      maxLosingStreak,
+      avgLosingStreak
+    }
+  };
+};
+
+export const getErrorDetection = async (userId: string) => {
+  const trades = await Trade.findAll({
+    where: { userId },
+    order: [["openTime", "ASC"]],
+  });
+
+  const errors = {
+    overtrade: { name: 'Overtrade', count: 0, pnlImpact: 0, description: 'Traded more than 5 times in a single day' },
+    revenge: { name: 'Revenge Trade', count: 0, pnlImpact: 0, description: 'Opened a trade within 15 minutes after a loss' },
+    lowRr: { name: 'Low RR', count: 0, pnlImpact: 0, description: 'Risk/Reward ratio was less than 1.0' },
+    outsidePlan: { name: 'Outside Plan', count: 0, pnlImpact: 0, description: 'Trade missing setup or journal notes' },
+    sizeIncrease: { name: 'Size Increase After Loss', count: 0, pnlImpact: 0, description: 'Increased position size immediately after a losing trade' }
+  };
+
+  const dailyCounts: Record<string, number> = {};
+  
+  let previousTrade: any = null;
+
+  trades.forEach(trade => {
+    const pnl = parseFloat(trade.pnl) - parseFloat(trade.fee);
+    const isWin = pnl > 0;
+    const qty = parseFloat(trade.quantity);
+
+    const dateStr = new Date(trade.openTime).toISOString().split('T')[0];
+    if (!dailyCounts[dateStr]) dailyCounts[dateStr] = 0;
+    dailyCounts[dateStr]++;
+
+    if (dailyCounts[dateStr] > 5) {
+      errors.overtrade.count++;
+      errors.overtrade.pnlImpact += pnl;
+    }
+
+    if (previousTrade && !previousTrade.isWin) {
+      const prevCloseTime = previousTrade.closeTime ? new Date(previousTrade.closeTime).getTime() : new Date(previousTrade.openTime).getTime();
+      const currentOpenTime = new Date(trade.openTime).getTime();
+      
+      const diffMins = (currentOpenTime - prevCloseTime) / (1000 * 60);
+      
+      if (diffMins >= 0 && diffMins <= 15) {
+        errors.revenge.count++;
+        errors.revenge.pnlImpact += pnl;
+      }
+
+      if (qty > previousTrade.qty * 1.1) {
+        errors.sizeIncrease.count++;
+        errors.sizeIncrease.pnlImpact += pnl;
+      }
+    }
+
+    if (trade.rr !== null) {
+      const rrValue = parseFloat(trade.rr);
+      if (rrValue > 0 && rrValue < 1.0) {
+        errors.lowRr.count++;
+        errors.lowRr.pnlImpact += pnl;
+      }
+    }
+
+    if (!trade.setupId || !trade.note || trade.note.trim() === '') {
+      errors.outsidePlan.count++;
+      errors.outsidePlan.pnlImpact += pnl;
+    }
+
+    previousTrade = {
+      isWin,
+      closeTime: trade.closeTime,
+      openTime: trade.openTime,
+      qty
+    };
+  });
+
+  return Object.values(errors).sort((a, b) => b.count - a.count);
+};
+
+export const getBehavioralAnalysis = async (userId: string, startDate?: string, endDate?: string) => {
+  const whereClause: any = { userId };
+  if (startDate || endDate) {
+    whereClause.openTime = {};
+    if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
+    if (endDate) whereClause.openTime[Op.lte] = new Date(endDate);
+  }
+
+  const trades = await Trade.findAll({
+    where: whereClause,
+    include: [
+      { model: Emotion, as: 'emotions' },
+    ],
+    order: [["openTime", "ASC"]],
+  });
+
+  const emotionStats: Record<string, { count: number, pnl: number, wins: number }> = {};
+  
+  let tradesWithSetup = 0;
+  let tradesWithoutSetup = 0;
+
+  const mistakesByHour: Record<number, number> = {};
+  for(let i=0; i<24; i++) mistakesByHour[i] = 0;
+
+  let previousTrade: any = null;
+
+  let winVolume = 0;
+  let winCount = 0;
+  let lossVolume = 0;
+  let lossCount = 0;
+
+  const dailyCounts: Record<string, number> = {};
+
+  trades.forEach(trade => {
+    const pnl = parseFloat(trade.pnl) - parseFloat(trade.fee);
+    const isWin = pnl > 0;
+    const qty = parseFloat(trade.quantity);
+    const entryPrice = parseFloat(trade.entryPrice);
+    const volume = qty * entryPrice;
+
+    if (trade.emotions && trade.emotions.length > 0) {
+      trade.emotions.forEach((emo: any) => {
+        if (!emotionStats[emo.name]) emotionStats[emo.name] = { count: 0, pnl: 0, wins: 0 };
+        emotionStats[emo.name].count++;
+        emotionStats[emo.name].pnl += pnl;
+        if (isWin) emotionStats[emo.name].wins++;
+      });
+    } else {
+      const name = "No Emotion";
+      if (!emotionStats[name]) emotionStats[name] = { count: 0, pnl: 0, wins: 0 };
+      emotionStats[name].count++;
+      emotionStats[name].pnl += pnl;
+      if (isWin) emotionStats[name].wins++;
+    }
+
+    if (trade.setupId) {
+      tradesWithSetup++;
+    } else {
+      tradesWithoutSetup++;
+    }
+
+    let tradeHasMistake = false;
+    const dateStr = new Date(trade.openTime).toISOString().split('T')[0];
+    if (!dailyCounts[dateStr]) dailyCounts[dateStr] = 0;
+    dailyCounts[dateStr]++;
+    
+    if (dailyCounts[dateStr] > 5) tradeHasMistake = true;
+    if (previousTrade && !previousTrade.isWin) {
+      const prevCloseTime = previousTrade.closeTime ? new Date(previousTrade.closeTime).getTime() : new Date(previousTrade.openTime).getTime();
+      const currentOpenTime = new Date(trade.openTime).getTime();
+      const diffMins = (currentOpenTime - prevCloseTime) / (1000 * 60);
+      if (diffMins >= 0 && diffMins <= 15) tradeHasMistake = true;
+      if (qty > previousTrade.qty * 1.1) tradeHasMistake = true;
+    }
+    if (trade.rr !== null && parseFloat(trade.rr) > 0 && parseFloat(trade.rr) < 1.0) tradeHasMistake = true;
+    if (!trade.setupId || !trade.note || trade.note.trim() === '') tradeHasMistake = true;
+
+    if (tradeHasMistake) {
+      const hour = new Date(trade.openTime).getHours();
+      mistakesByHour[hour]++;
+    }
+
+    if (isWin) {
+      winVolume += volume;
+      winCount++;
+    } else {
+      lossVolume += volume;
+      lossCount++;
+    }
+
+    previousTrade = {
+      isWin,
+      closeTime: trade.closeTime,
+      openTime: trade.openTime,
+      qty
+    };
+  });
+
+  const avgWinSize = winCount > 0 ? winVolume / winCount : 0;
+  const avgLossSize = lossCount > 0 ? lossVolume / lossCount : 0;
+
+  const formattedEmotions = Object.keys(emotionStats).map(name => ({
+    emotion: name,
+    totalTrades: emotionStats[name].count,
+    winRate: (emotionStats[name].wins / emotionStats[name].count) * 100,
+    pnl: emotionStats[name].pnl
+  })).sort((a: any, b: any) => b.totalTrades - a.totalTrades);
+
+  const formattedMistakesByHour = Object.keys(mistakesByHour).map(hour => ({
+    hour: `${hour}h`,
+    mistakes: mistakesByHour[parseInt(hour)]
+  }));
+
+  return {
+    emotionPerformance: formattedEmotions,
+    setupConsistency: [
+      { name: 'With Setup', value: tradesWithSetup },
+      { name: 'No Setup', value: tradesWithoutSetup }
+    ],
+    mistakesByHour: formattedMistakesByHour,
+    riskBehavior: {
+      avgWinSize,
+      avgLossSize,
+      riskRatio: avgWinSize > 0 ? avgLossSize / avgWinSize : 0
+    }
+  };
+};
+
+export const getBehaviorFlow = async (userId: string, startDate?: string, endDate?: string) => {
+  const whereClause: any = { userId };
+  if (startDate || endDate) {
+    whereClause.openTime = {};
+    if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
+    if (endDate) whereClause.openTime[Op.lte] = new Date(endDate);
+  }
+
+  const trades = await Trade.findAll({
+    where: whereClause,
+    include: [
+      { model: TradeSetup, as: 'setup' },
+      { model: Emotion, as: 'emotions' },
+    ],
+  });
+
+  const tree = {
+    totalTrades: 0,
+    totalPnl: 0,
+    setups: {} as Record<string, {
+      name: string,
+      count: number,
+      pnl: number,
+      emotions: Record<string, {
+        name: string,
+        count: number,
+        pnl: number,
+        wins: number,
+        losses: number,
+        winPnl: number,
+        lossPnl: number
+      }>
+    }>
+  };
+
+  trades.forEach(trade => {
+    const pnl = parseFloat(trade.pnl) - parseFloat(trade.fee);
+    const isWin = pnl > 0;
+    
+    tree.totalTrades++;
+    tree.totalPnl += pnl;
+
+    const setupName = trade.setup ? trade.setup.name : "No Setup";
+    if (!tree.setups[setupName]) {
+      tree.setups[setupName] = { name: setupName, count: 0, pnl: 0, emotions: {} };
+    }
+    
+    const sNode = tree.setups[setupName];
+    sNode.count++;
+    sNode.pnl += pnl;
+
+    const emoNames = (trade.emotions && trade.emotions.length > 0) 
+      ? trade.emotions.map((e: any) => e.name) 
+      : ["No Emotion"];
+
+    emoNames.forEach((emo: string) => {
+      if (!sNode.emotions[emo]) {
+        sNode.emotions[emo] = { name: emo, count: 0, pnl: 0, wins: 0, losses: 0, winPnl: 0, lossPnl: 0 };
+      }
+      const eNode = sNode.emotions[emo];
+      eNode.count++;
+      eNode.pnl += pnl;
+      if (isWin) {
+        eNode.wins++;
+        eNode.winPnl += pnl;
+      } else {
+        eNode.losses++;
+        eNode.lossPnl += pnl;
+      }
+    });
+  });
+
+  // Convert objects to arrays for easier mapping
+  const formattedSetups = Object.values(tree.setups).map(setup => ({
+    name: setup.name,
+    count: setup.count,
+    pnl: setup.pnl,
+    emotions: Object.values(setup.emotions).sort((a, b) => b.count - a.count)
+  })).sort((a, b) => b.count - a.count);
+
+  return {
+    totalTrades: tree.totalTrades,
+    totalPnl: tree.totalPnl,
+    setups: formattedSetups
   };
 };

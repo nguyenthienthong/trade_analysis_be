@@ -9,6 +9,9 @@ import accountRoute from "./routes/account.route";
 import analysisRoute from "./routes/analysis.route";
 import marketDataRoute from "./routes/market-data.route";
 import aiRoute from "./routes/ai.route";
+import metadataRoute from "./routes/metadata.route";
+import tradeImageRoute from "./routes/trade-image.route";
+import path from "path";
 
 const app = express();
 
@@ -18,12 +21,16 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 app.use("/api/auth", authRoute);
 app.use("/api/trades", tradesRoute);
+app.use("/api/trades", tradeImageRoute);
 app.use("/api/accounts", accountRoute);
 app.use("/api/analysis", analysisRoute);
 app.use("/api/market-data", marketDataRoute);
 app.use("/api/ai", aiRoute);
+app.use("/api/metadata", metadataRoute);
 
 app.get("/health", (_, res) => {
   res.json({ status: "OK" });

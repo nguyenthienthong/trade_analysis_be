@@ -5,7 +5,17 @@ import {
   Model,
   PrimaryKey,
   Table,
+  BelongsTo,
+  BelongsToMany,
+  ForeignKey,
+  HasMany,
 } from "sequelize-typescript";
+import { TradeSetup } from "./trade-setup.model";
+import { Emotion } from "./emotion.model";
+import { Tag } from "./tag.model";
+import { TradeEmotion } from "./trade-emotion.model";
+import { TradeTag } from "./trade-tag.model";
+import { TradeImage } from "./trade-image.model";
 
 @Table({ tableName: "trades", underscored: true, timestamps: false })
 export class Trade extends Model {
@@ -53,9 +63,22 @@ export class Trade extends Model {
   @Column(DataType.INTEGER)
   declare durationMinutes: number | null;
 
+  @ForeignKey(() => TradeSetup)
   @Column(DataType.UUID)
   declare setupId: string | null;
 
   @Column(DataType.TEXT)
   declare note: string | null;
+
+  @BelongsTo(() => TradeSetup, 'setupId')
+  declare setup: TradeSetup;
+
+  @BelongsToMany(() => Emotion, () => TradeEmotion)
+  declare emotions: Emotion[];
+
+  @BelongsToMany(() => Tag, () => TradeTag)
+  declare tags: Tag[];
+
+  @HasMany(() => TradeImage)
+  declare images: TradeImage[];
 }

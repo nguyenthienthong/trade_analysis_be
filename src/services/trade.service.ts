@@ -1,4 +1,10 @@
 import { Trade } from "../models/trade.model";
+import { Emotion } from "../models/emotion.model";
+import { Tag } from "../models/tag.model";
+import { TradeSetup } from "../models/trade-setup.model";
+import { TradeEmotion } from "../models/trade-emotion.model";
+import { TradeTag } from "../models/trade-tag.model";
+import { TradeImage } from "../models/trade-image.model";
 import { Op } from "sequelize";
 
 interface GetTradesParams {
@@ -63,3 +69,50 @@ export const getUserTrades = async ({
     data: rows,
   };
 };
+
+export const getTradeById = async (userId: string, tradeId: string) => {
+  const trade = await Trade.findOne({
+    where: { id: tradeId, userId },
+    include: [
+      { model: TradeSetup, as: 'setup' },
+      { model: Emotion, as: 'emotions', through: { attributes: [] } },
+      { model: Tag, as: 'tags', through: { attributes: [] } },
+      { model: TradeImage, as: 'images' },
+    ],
+  });
+
+  return trade;
+};
+
+export const updateTradeJournal = async (
+  userId: string,
+  tradeId: string,
+  data: { note?: string; setupId?: string; emotionIds?: string[]; tagIds?: string[] }
+) => {
+  const trade = await Trade.findOne({ where: { id: tradeId, userId } });
+  if (!trade) throw new Error("Trade not found");
+
+  if (data.note !== undefined) trade.note = data.note;
+  if (data.setupId !== undefined) trade.setupId = data.setupId || null;
+  await trade.save();
+
+  if (data.emotionIds !== undefined) {
+    await TradeEmotion.destroy({ where: { tradeId: trade.id } });
+    if (data.emotionIds.length > 0) {
+      const emos = data.emotionIds.map(eId => ({ tradeId: trade.id, emotionId: eId }));
+      await TradeEmotion.bulkCreate(emos);
+    }
+  }
+
+  if (data.tagIds !== undefined) {
+    await TradeTag.destroy({ where: { tradeId: trade.id } });
+    if (data.tagIds.length > 0) {
+      const tags = data.tagIds.map(tId => ({ tradeId: trade.id, tagId: tId }));
+      await TradeTag.bulkCreate(tags);
+    }
+  }
+
+  // Return updated trade
+  return getTradeById(userId, tradeId);
+};
+

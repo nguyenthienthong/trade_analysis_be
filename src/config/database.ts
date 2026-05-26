@@ -3,6 +3,12 @@ import { User } from "../models/user.model";
 import { Account } from "../models/account.model";
 import { Trade } from "../models/trade.model";
 import { DailyStat } from "../models/daily-stat.model";
+import { TradeSetup } from "../models/trade-setup.model";
+import { Emotion } from "../models/emotion.model";
+import { Tag } from "../models/tag.model";
+import { TradeEmotion } from "../models/trade-emotion.model";
+import { TradeTag } from "../models/trade-tag.model";
+import { TradeImage } from "../models/trade-image.model";
 
 export const sequelize = new Sequelize({
   dialect: "postgres",
@@ -11,7 +17,7 @@ export const sequelize = new Sequelize({
   database: process.env.DB_NAME,
   username: process.env.DB_USER,
   password: process.env.DB_PASS,
-  models: [User, Account, Trade, DailyStat],
+  models: [User, Account, Trade, DailyStat, TradeSetup, Emotion, Tag, TradeEmotion, TradeTag, TradeImage],
   logging: false,
 });
 

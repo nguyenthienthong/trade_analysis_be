@@ -3,7 +3,7 @@ import {
   importBinanceCsvController,
   previewBinanceCsvController,
 } from "../controllers/binance-import.controller";
-import { getUserTrades } from "../controllers/trade.controller";
+import { getUserTrades, getTradeById, updateTradeJournal } from "../controllers/trade.controller";
 import authMiddleware from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -96,5 +96,37 @@ router.post(
  *         description: Unauthorized
  */
 router.get("/", authMiddleware, getUserTrades);
+
+/**
+ * @swagger
+ * /api/trades/{id}:
+ *   get:
+ *     summary: Get trade by ID
+ *     tags: [Trades]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Trade object
+ *       404:
+ *         description: Not found
+ */
+router.get("/:id", authMiddleware, getTradeById);
+
+/**
+ * @swagger
+ * /api/trades/{id}/journal:
+ *   patch:
+ *     summary: Update trade journal (note, setup, tags, emotions)
+ *     tags: [Trades]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Updated trade
+ *       404:
+ *         description: Not found
+ */
+router.patch("/:id/journal", authMiddleware, updateTradeJournal);
 
 export default router;
