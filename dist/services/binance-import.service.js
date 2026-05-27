@@ -42,9 +42,9 @@ const buildTradesFromRows = (rows, userId, accountId) => {
         const rawSide = row.Side || row.Type || "";
         const side = rawSide.toUpperCase();
         const priceStr = row.Price || "0";
-        const executedStr = row.Executed || row.Amount || "0";
+        const executedStr = row.Executed || row.Quantity || row.Amount || "0";
         const feeStr = row.Fee || "0";
-        const pnlStr = row["Realized PnL"] || "0";
+        const pnlStr = row["Realized PnL"] || row["Realized Profit"] || "0";
         const timeStr = row["Date(UTC)"] || row["Time"] || row["Date"];
         if (!symbol || !side || !timeStr)
             continue;
@@ -53,7 +53,7 @@ const buildTradesFromRows = (rows, userId, accountId) => {
         // Fee parsing logic: Binance Spot format often has fee as "0.123 BNB"
         let fee = 0;
         if (typeof feeStr === 'string') {
-            const feeMatch = feeStr.match(/[\d.]+/);
+            const feeMatch = feeStr.match(/-?[\d.]+/);
             if (feeMatch)
                 fee = parseFloat(feeMatch[0]);
         }
@@ -89,19 +89,17 @@ const buildTradesFromRows = (rows, userId, accountId) => {
             // Opposite side - Closing (partial or full)
             pos.fee += fee;
             pos.pnl += pnl;
-            // In Binance, if you sell more than your long position, it reverses.
-            // For simplicity, we assume strict close.
             pos.quantity -= executed;
-            if (pos.quantity <= 0.000001) { // Floating point precision check
-                // Position fully closed
+            if (pos.quantity <= 0.000001) {
+                // Position fully closed or reversed
                 finishedTrades.push({
                     userId: userId || null,
                     accountId: accountId || null,
                     symbol: pos.symbol,
                     side: pos.side === "BUY" ? "long" : "short",
                     entryPrice: pos.entryPrice,
-                    exitPrice: price, // The last closing price
-                    quantity: pos.totalCost / pos.entryPrice, // Original total quantity
+                    exitPrice: price,
+                    quantity: pos.totalCost / pos.entryPrice,
                     pnl: pos.pnl,
                     fee: pos.fee,
                     openTime: pos.openTime,
@@ -109,8 +107,21 @@ const buildTradesFromRows = (rows, userId, accountId) => {
                     durationMinutes: Math.round((time.getTime() - pos.openTime.getTime()) / 60000),
                     note: "Imported via Binance Trade Builder",
                 });
-                // Remove from active positions
+                const remainingQuantity = Math.abs(pos.quantity);
                 delete activePositions[symbol];
+                // If it was a reversal (sold more than owned), open a new position with the remainder
+                if (remainingQuantity > 0.000001) {
+                    activePositions[symbol] = {
+                        symbol,
+                        side: side,
+                        entryPrice: price,
+                        totalCost: price * remainingQuantity,
+                        quantity: remainingQuantity,
+                        openTime: time,
+                        fee: 0, // fee already attributed to the closed trade
+                        pnl: 0,
+                    };
+                }
             }
         }
     }
