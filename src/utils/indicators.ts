@@ -303,6 +303,55 @@ export function calculateMomentum(closes: number[], period = 10): number[] {
   return mom;
 }
 
+// Average True Range (ATR)
+export function calculateATR(highs: number[], lows: number[], closes: number[], period = 14): number[] {
+  const atr: number[] = [];
+  const tr: number[] = [];
+
+  if (closes.length === 0) return [];
+
+  // First TR
+  tr.push(highs[0] - lows[0]);
+  for (let i = 1; i < closes.length; i++) {
+    const currentTr = Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    );
+    tr.push(currentTr);
+  }
+
+  // Calculate ATR
+  let currentAtr = tr.slice(0, period).reduce((sum, v) => sum + v, 0) / period;
+  for (let i = 0; i < period; i++) {
+    atr.push(currentAtr); // Seed first elements
+  }
+
+  for (let i = period; i < tr.length; i++) {
+    currentAtr = (currentAtr * (period - 1) + tr[i]) / period;
+    atr.push(currentAtr);
+  }
+  return atr;
+}
+
+// On-Balance Volume (OBV)
+export function calculateOBV(closes: number[], volumes: number[]): number[] {
+  const obv: number[] = [];
+  if (closes.length === 0) return [];
+
+  obv.push(volumes[0]);
+  for (let i = 1; i < closes.length; i++) {
+    let currentObv = obv[i - 1];
+    if (closes[i] > closes[i - 1]) {
+      currentObv += volumes[i];
+    } else if (closes[i] < closes[i - 1]) {
+      currentObv -= volumes[i];
+    }
+    obv.push(currentObv);
+  }
+  return obv;
+}
+
 // Generate TradingView-style Analysis Rating
 export interface IndicatorDetails {
   value: number;
@@ -351,12 +400,20 @@ export interface TARatingResult {
       sma200: IndicatorDetails;
     };
   };
+  volatility: {
+    atr: number;
+  };
+  volume: {
+    obv: number;
+    obvAction: "BUY" | "SELL" | "NEUTRAL";
+  };
 }
 
 export function generateTradingViewRating(
   highs: number[],
   lows: number[],
-  closes: number[]
+  closes: number[],
+  volumes: number[] = []
 ): TARatingResult {
   const len = closes.length;
   const lastIdx = len - 1;
@@ -367,6 +424,8 @@ export function generateTradingViewRating(
       summary: { rating: "NEUTRAL", buyCount: 0, sellCount: 0, neutralCount: 0 },
       oscillators: { rating: "NEUTRAL", buyCount: 0, sellCount: 0, neutralCount: 0, items: {} },
       movingAverages: { rating: "NEUTRAL", buyCount: 0, sellCount: 0, neutralCount: 0, items: {} as any },
+      volatility: { atr: 0 },
+      volume: { obv: 0, obvAction: "NEUTRAL" },
     };
   }
 
@@ -392,6 +451,19 @@ export function generateTradingViewRating(
   const sma100 = calculateSMA(closes, 100);
   const ema200 = calculateEMA(closes, 200);
   const sma200 = calculateSMA(closes, 200);
+
+  // Additional Indicators
+  const atr = calculateATR(highs, lows, closes, 14);
+  const curAtr = atr[lastIdx];
+
+  const obv = volumes.length === len ? calculateOBV(closes, volumes) : closes.map(() => 0);
+  const curObv = obv[lastIdx];
+  const obvSma = calculateSMA(obv, 20); // 20-period SMA of OBV
+  const curObvSma = obvSma[lastIdx];
+  
+  let obvAction: "BUY" | "SELL" | "NEUTRAL" = "NEUTRAL";
+  if (curObv > curObvSma) obvAction = "BUY";
+  else if (curObv < curObvSma) obvAction = "SELL";
 
   const price = closes[lastIdx];
 
@@ -541,6 +613,13 @@ export function generateTradingViewRating(
       sellCount: maSell,
       neutralCount: maNeutral,
       items: movingAveragesItems,
+    },
+    volatility: {
+      atr: curAtr,
+    },
+    volume: {
+      obv: curObv,
+      obvAction: obvAction,
     },
   };
 }

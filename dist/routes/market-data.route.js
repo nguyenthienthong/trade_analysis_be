@@ -1,23 +1,18 @@
-import { Router } from "express";
-import {
-  getOHLCV,
-  getFundingRate,
-  getOpenInterest,
-  getIndicatorsSummary,
-  getCoinglassSummary,
-  getPatternDetectionSummary
-} from "../controllers/market-data.controller";
-import authMiddleware from "../middlewares/auth.middleware";
-
-const router = Router();
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const market_data_controller_1 = require("../controllers/market-data.controller");
+const auth_middleware_1 = __importDefault(require("../middlewares/auth.middleware"));
+const router = (0, express_1.Router)();
 /**
  * @swagger
  * tags:
  *   name: Market Data
  *   description: Real-time Market Data and Analytics Service
  */
-
 /**
  * @swagger
  * /api/market-data/ohlcv:
@@ -65,8 +60,7 @@ const router = Router();
  *       401:
  *         description: Unauthorized
  */
-router.get("/ohlcv", authMiddleware, getOHLCV);
-
+router.get("/ohlcv", auth_middleware_1.default, market_data_controller_1.getOHLCV);
 /**
  * @swagger
  * /api/market-data/funding-rate:
@@ -101,8 +95,7 @@ router.get("/ohlcv", authMiddleware, getOHLCV);
  *       401:
  *         description: Unauthorized
  */
-router.get("/funding-rate", authMiddleware, getFundingRate);
-
+router.get("/funding-rate", auth_middleware_1.default, market_data_controller_1.getFundingRate);
 /**
  * @swagger
  * /api/market-data/open-interest:
@@ -144,8 +137,7 @@ router.get("/funding-rate", authMiddleware, getFundingRate);
  *       401:
  *         description: Unauthorized
  */
-router.get("/open-interest", authMiddleware, getOpenInterest);
-
+router.get("/open-interest", auth_middleware_1.default, market_data_controller_1.getOpenInterest);
 /**
  * @swagger
  * /api/market-data/indicators:
@@ -181,8 +173,7 @@ router.get("/open-interest", authMiddleware, getOpenInterest);
  *       401:
  *         description: Unauthorized
  */
-router.get("/indicators", authMiddleware, getIndicatorsSummary);
-
+router.get("/indicators", auth_middleware_1.default, market_data_controller_1.getIndicatorsSummary);
 /**
  * @swagger
  * /api/market-data/coinglass-summary:
@@ -204,8 +195,7 @@ router.get("/indicators", authMiddleware, getIndicatorsSummary);
  *       401:
  *         description: Unauthorized
  */
-router.get("/coinglass-summary", authMiddleware, getCoinglassSummary);
-
+router.get("/coinglass-summary", auth_middleware_1.default, market_data_controller_1.getCoinglassSummary);
 /**
  * @swagger
  * /api/market-data/patterns:
@@ -227,6 +217,5 @@ router.get("/coinglass-summary", authMiddleware, getCoinglassSummary);
  *       401:
  *         description: Unauthorized
  */
-router.get("/patterns", authMiddleware, getPatternDetectionSummary);
-
-export default router;
+router.get("/patterns", auth_middleware_1.default, market_data_controller_1.getPatternDetectionSummary);
+exports.default = router;

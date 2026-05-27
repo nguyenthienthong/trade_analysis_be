@@ -5,6 +5,7 @@ import {
   calculateEMA,
   TARatingResult,
 } from "../utils/indicators";
+import { detectAllPatterns, PatternResult } from "../utils/patterns";
 
 // Simple in-memory cache to prevent rate-limiting and speed up requests
 interface CacheEntry {
@@ -472,8 +473,9 @@ export const getTechnicalIndicatorsSummary = async (
   const highs = ohlcv.map((o) => o.high);
   const lows = ohlcv.map((o) => o.low);
   const closes = ohlcv.map((o) => o.close);
+  const volumes = ohlcv.map((o) => o.volume);
 
-  const rating = generateTradingViewRating(highs, lows, closes);
+  const rating = generateTradingViewRating(highs, lows, closes, volumes);
 
   setCachedData(cacheKey, rating);
   return rating;
@@ -595,4 +597,23 @@ export const getCoinglassSummary = async (
 
   setCachedData(cacheKey, data);
   return data;
+};
+
+/**
+ * 6. Pattern Detection Summary
+ */
+export const getPatternDetectionSummary = async (
+  symbol: string = "BTCUSDT",
+  interval: string = "1h",
+  source: "binance" | "bybit" = "binance"
+): Promise<PatternResult[]> => {
+  const cacheKey = `patterns_${symbol}_${interval}_${source}`;
+  const cached = getCachedData<PatternResult[]>(cacheKey);
+  if (cached) return cached;
+
+  const ohlcv = await getOHLCV(symbol, interval, 300, source, true);
+  const patterns = detectAllPatterns(ohlcv);
+
+  setCachedData(cacheKey, patterns);
+  return patterns;
 };

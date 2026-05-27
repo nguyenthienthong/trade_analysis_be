@@ -1,0 +1,37 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const morgan_1 = __importDefault(require("morgan"));
+const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const swagger_1 = require("./config/swagger");
+const auth_route_1 = __importDefault(require("./routes/auth.route"));
+const trade_route_1 = __importDefault(require("./routes/trade.route"));
+const account_route_1 = __importDefault(require("./routes/account.route"));
+const analysis_route_1 = __importDefault(require("./routes/analysis.route"));
+const market_data_route_1 = __importDefault(require("./routes/market-data.route"));
+const ai_route_1 = __importDefault(require("./routes/ai.route"));
+const metadata_route_1 = __importDefault(require("./routes/metadata.route"));
+const trade_image_route_1 = __importDefault(require("./routes/trade-image.route"));
+const path_1 = __importDefault(require("path"));
+const app = (0, express_1.default)();
+app.use("/api/docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec));
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
+app.use((0, morgan_1.default)("dev"));
+app.use("/uploads", express_1.default.static(path_1.default.join(process.cwd(), "uploads")));
+app.use("/api/auth", auth_route_1.default);
+app.use("/api/trades", trade_route_1.default);
+app.use("/api/trades", trade_image_route_1.default);
+app.use("/api/accounts", account_route_1.default);
+app.use("/api/analysis", analysis_route_1.default);
+app.use("/api/market-data", market_data_route_1.default);
+app.use("/api/ai", ai_route_1.default);
+app.use("/api/metadata", metadata_route_1.default);
+app.get("/health", (_, res) => {
+    res.json({ status: "OK" });
+});
+exports.default = app;

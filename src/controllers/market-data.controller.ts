@@ -71,3 +71,17 @@ export const getCoinglassSummary = async (req: Request, res: Response) => {
     res.status(400).json({ message: error.message || "Failed to fetch Coinglass dashboard summary" });
   }
 };
+
+export const getPatternDetectionSummary = async (req: Request, res: Response) => {
+  try {
+    const symbol = (req.query.symbol as string) || "BTCUSDT";
+    const interval = (req.query.interval as string) || "1h";
+    const source = (req.query.source as "binance" | "bybit") || "binance";
+
+    const data = await marketService.getPatternDetectionSummary(symbol, interval, source);
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.error("Error in getPatternDetectionSummary controller:", error);
+    res.status(400).json({ message: error.message || "Failed to fetch pattern detection summary" });
+  }
+};

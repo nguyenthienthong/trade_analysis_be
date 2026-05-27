@@ -3,9 +3,16 @@ import { TradeSetup } from "../models/trade-setup.model";
 import { Emotion } from "../models/emotion.model";
 import { Op } from "sequelize";
 
-export const getStatsOverview = async (userId: string) => {
+export const getStatsOverview = async (userId: string, startDate?: string, endDate?: string) => {
+  const whereClause: any = { userId };
+  if (startDate || endDate) {
+    whereClause.openTime = {};
+    if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
+    if (endDate) whereClause.openTime[Op.lte] = new Date(endDate);
+  }
+
   const trades = await Trade.findAll({ 
-    where: { userId },
+    where: whereClause,
     order: [["openTime", "ASC"]],
   });
 

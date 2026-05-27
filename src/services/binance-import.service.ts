@@ -25,28 +25,69 @@ interface Position {
 }
 
 export const buildTradesFromRows = (rows: BinanceRow[], userId?: string, accountId?: string) => {
+  const parseBinanceDate = (dateStr: string): Date => {
+    if (!dateStr) return new Date("Invalid");
+    // Handle YY-MM-DD HH:mm:ss (often corrupted by Excel)
+    const matchYY = dateStr.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2})/);
+    if (matchYY) return new Date(`20${matchYY[1]}-${matchYY[2]}-${matchYY[3]}T${matchYY[4]}Z`);
+    
+    // Handle YYYY-MM-DD HH:mm:ss
+    const matchYYYY = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}:\d{2})/);
+    if (matchYYYY) return new Date(`${matchYYYY[1]}-${matchYYYY[2]}-${matchYYYY[3]}T${matchYYYY[4]}Z`);
+    
+    return new Date(dateStr);
+  };
+
+  // Filter out invalid rows first
+  const validRows = rows.filter(r => {
+    const timeStr = r["Date(UTC)"] || (r as any)["Time"] || (r as any)["Date"];
+    if (!timeStr) return false;
+    const time = parseBinanceDate(timeStr);
+    return !isNaN(time.getTime());
+  });
+
   // Sort rows chronologically (oldest first)
-  const sortedRows = rows.sort(
-    (a, b) => new Date(a["Date(UTC)"]).getTime() - new Date(b["Date(UTC)"]).getTime()
-  );
+  const sortedRows = validRows.sort((a, b) => {
+    const timeA = a["Date(UTC)"] || (a as any)["Time"] || (a as any)["Date"];
+    const timeB = b["Date(UTC)"] || (b as any)["Time"] || (b as any)["Date"];
+    return parseBinanceDate(timeA).getTime() - parseBinanceDate(timeB).getTime();
+  });
 
   const activePositions: Record<string, Position> = {};
   const finishedTrades: any[] = [];
 
   for (const row of sortedRows) {
-    const symbol = row.Pair;
-    const side = row.Side;
-    const price = parseFloat(row.Price);
-    const executed = parseFloat(row.Executed);
-    const fee = parseFloat(row.Fee || "0");
-    const pnl = parseFloat(row["Realized PnL"] || "0");
-    const time = new Date(row["Date(UTC)"]);
+    const symbol = row.Pair || (row as any).Market || (row as any).Symbol;
+    const rawSide = row.Side || (row as any).Type || "";
+    const side = rawSide.toUpperCase();
+    const priceStr = row.Price || "0";
+    const executedStr = row.Executed || row.Amount || "0";
+    const feeStr = row.Fee || "0";
+    const pnlStr = row["Realized PnL"] || "0";
+    const timeStr = row["Date(UTC)"] || (row as any)["Time"] || (row as any)["Date"];
+
+    if (!symbol || !side || !timeStr) continue;
+
+    const price = parseFloat(priceStr.replace(/,/g, ''));
+    const executed = parseFloat(executedStr.replace(/,/g, ''));
+    
+    // Fee parsing logic: Binance Spot format often has fee as "0.123 BNB"
+    let fee = 0;
+    if (typeof feeStr === 'string') {
+      const feeMatch = feeStr.match(/[\d.]+/);
+      if (feeMatch) fee = parseFloat(feeMatch[0]);
+    } else {
+      fee = parseFloat(feeStr);
+    }
+    
+    const pnl = parseFloat(pnlStr.replace(/,/g, ''));
+    const time = parseBinanceDate(timeStr);
 
     if (!activePositions[symbol]) {
       // Open new position
       activePositions[symbol] = {
         symbol,
-        side,
+        side: side as "BUY" | "SELL",
         entryPrice: price,
         totalCost: price * executed,
         quantity: executed,
@@ -132,6 +173,7 @@ export const importBinanceCsv = async (
   const rows = parse(csv, {
     columns: true,
     skip_empty_lines: true,
+    bom: true,
   }) as BinanceRow[];
 
   const trades = buildTradesFromRows(rows, userId, accountId);
@@ -145,6 +187,7 @@ export const parseBinanceCsv = (filePath: string) => {
   const rows = parse(csv, {
     columns: true,
     skip_empty_lines: true,
+    bom: true,
   }) as BinanceRow[];
 
   return buildTradesFromRows(rows);
