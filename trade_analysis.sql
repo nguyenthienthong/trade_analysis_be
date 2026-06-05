@@ -44,6 +44,23 @@ CREATE TABLE public.accounts (
 ALTER TABLE public.accounts OWNER TO postgres;
 
 --
+-- TOC entry (custom)
+-- Name: ai_contexts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ai_contexts (
+    id uuid NOT NULL,
+    "userId" uuid NOT NULL,
+    type character varying(255) NOT NULL,
+    content text NOT NULL,
+    embedding vector(768),
+    "createdAt" timestamp with time zone,
+    "updatedAt" timestamp with time zone
+);
+
+ALTER TABLE public.ai_contexts OWNER TO postgres;
+
+--
 -- TOC entry 227 (class 1259 OID 16579)
 -- Name: daily_stats; Type: TABLE; Schema: public; Owner: postgres
 --
@@ -274,6 +291,13 @@ ce993e26-8fc4-43e0-9405-4dd197f32b40	camtu187zz@gmail.com	$2b$10$7E1t7JBrfFZp6VU
 ALTER TABLE ONLY public.accounts
     ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
 
+--
+-- Name: ai_contexts ai_contexts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ai_contexts
+    ADD CONSTRAINT ai_contexts_pkey PRIMARY KEY (id);
+
 
 --
 -- TOC entry 4818 (class 2606 OID 16585)
@@ -404,6 +428,13 @@ CREATE UNIQUE INDEX uniq_trade_import ON public.trades USING btree (symbol, side
 
 ALTER TABLE ONLY public.accounts
     ADD CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+--
+-- Name: ai_contexts ai_contexts_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ai_contexts
+    ADD CONSTRAINT "ai_contexts_userId_fkey" FOREIGN KEY ("userId") REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE NO ACTION;
 
 
 --

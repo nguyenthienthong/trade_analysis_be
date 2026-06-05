@@ -1,54 +1,42 @@
 import { Request, Response } from "express";
-import { analyzeTradeContext, AIAnalysisInput, streamAIChat } from "../services/ai.service";
-import { AuthRequest } from "../middlewares/auth.middleware";
+import * as aiBrainService from "../services/ai-brain.service";
 
-export const analyzeTrade = async (req: Request, res: Response) => {
+export const chat = async (req: Request, res: Response) => {
   try {
-    const input: AIAnalysisInput = req.body;
-    
-    // Basic validation
-    if (!input.symbol || input.price === undefined) {
-      return res.status(400).json({ success: false, message: "Missing required fields: symbol, price" });
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    const { message, symbol } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
 
-    const analysis = await analyzeTradeContext(input);
-    
-    res.json({
-      success: true,
-      data: analysis
-    });
+    if (!message) {
+      res.status(400).json({ message: "Message is required" });
+      return;
+    }
+
+    const reply = await aiBrainService.chatWithBrain(userId, message, symbol);
+    res.status(200).json({ reply });
   } catch (error: any) {
-    console.error("Controller Error in analyzeTrade:", error);
-    res.status(500).json({ success: false, message: error.message || "Internal server error" });
+    console.error("Error in AI chat controller:", error);
+    res.status(500).json({ message: error.message || "Failed to process AI chat" });
   }
 };
 
-export const chat = async (req: AuthRequest, res: Response) => {
+export const syncProfile = async (req: Request, res: Response) => {
   try {
-    const { message, symbol, isWeeklyReview } = req.body;
-    // Assuming userId is available via auth middleware
-    const userId = req.user?.id || "anonymous";
+    const userId = (req as any).user?.id || (req as any).user?.userId;
 
-    if (!message) {
-      return res.status(400).json({ success: false, message: "Message is required" });
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
 
-    const stream = await streamAIChat(userId, message, symbol, isWeeklyReview);
-
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Transfer-Encoding", "chunked");
-
-    for await (const chunk of stream) {
-      res.write(chunk.text);
-    }
-
-    res.end();
+    const profileText = await aiBrainService.syncTradingProfile(userId);
+    res.status(200).json({ message: "Profile synced successfully", profileText });
   } catch (error: any) {
-    console.error("Controller Error in chat stream:", error);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, message: error.message || "Internal server error" });
-    } else {
-      res.end();
-    }
+    console.error("Error in AI sync profile controller:", error);
+    res.status(500).json({ message: error.message || "Failed to sync profile" });
   }
 };
