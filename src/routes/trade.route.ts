@@ -3,6 +3,14 @@ import {
   importBinanceCsvController,
   previewBinanceCsvController,
 } from "../controllers/binance-import.controller";
+import {
+  importBybitCsvController,
+  previewBybitCsvController,
+} from "../controllers/bybit-import.controller";
+import {
+  importOkxCsvController,
+  previewOkxCsvController,
+} from "../controllers/okx-import.controller";
 import { getUserTrades, getTradeById, updateTradeJournal } from "../controllers/trade.controller";
 import authMiddleware from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
@@ -80,6 +88,35 @@ router.post(
   upload.single("file"),
   previewBinanceCsvController,
 );
+
+router.post(
+  "/import/bybit",
+  authMiddleware,
+  upload.single("file"),
+  importBybitCsvController,
+);
+
+router.post(
+  "/import/bybit/preview",
+  authMiddleware,
+  upload.single("file"),
+  previewBybitCsvController,
+);
+
+router.post(
+  "/import/okx",
+  authMiddleware,
+  upload.single("file"),
+  importOkxCsvController,
+);
+
+router.post(
+  "/import/okx/preview",
+  authMiddleware,
+  upload.single("file"),
+  previewOkxCsvController,
+);
+
 
 /**
  * @swagger

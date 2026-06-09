@@ -1,10 +1,29 @@
 import { Trade } from "../models/trade.model";
 import { TradeSetup } from "../models/trade-setup.model";
 import { Emotion } from "../models/emotion.model";
+import { Account } from "../models/account.model";
 import { Op } from "sequelize";
 
-export const getStatsOverview = async (userId: string, startDate?: string, endDate?: string) => {
+const resolveAccountId = async (userId: string, accountId?: string): Promise<string | undefined> => {
+  let targetAccountId = accountId;
+  if (!targetAccountId) {
+    const defaultAccount = await Account.findOne({
+      where: { user_id: userId, is_default: true }
+    });
+    if (defaultAccount) {
+      targetAccountId = defaultAccount.id;
+    }
+  }
+  return targetAccountId;
+};
+
+export const getStatsOverview = async (userId: string, startDate?: string, endDate?: string, accountId?: string) => {
+  const targetAccountId = await resolveAccountId(userId, accountId);
   const whereClause: any = { userId };
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
+  }
+
   if (startDate || endDate) {
     whereClause.openTime = {};
     if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
@@ -65,9 +84,15 @@ export const getStatsOverview = async (userId: string, startDate?: string, endDa
   };
 };
 
-export const getEquityCurve = async (userId: string) => {
+export const getEquityCurve = async (userId: string, accountId?: string) => {
+  const targetAccountId = await resolveAccountId(userId, accountId);
+  const whereClause: any = { userId };
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
+  }
+
   const trades = await Trade.findAll({
-    where: { userId },
+    where: whereClause,
     order: [["openTime", "ASC"]],
   });
 
@@ -98,8 +123,13 @@ export const getEquityCurve = async (userId: string) => {
   };
 };
 
-export const getAdvancedAnalytics = async (userId: string, startDate?: string, endDate?: string) => {
+export const getAdvancedAnalytics = async (userId: string, startDate?: string, endDate?: string, accountId?: string) => {
+  const targetAccountId = await resolveAccountId(userId, accountId);
   const whereClause: any = { userId };
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
+  }
+
   if (startDate || endDate) {
     whereClause.openTime = {};
     if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
@@ -200,9 +230,15 @@ export const getAdvancedAnalytics = async (userId: string, startDate?: string, e
   };
 };
 
-export const getErrorDetection = async (userId: string) => {
+export const getErrorDetection = async (userId: string, accountId?: string) => {
+  const targetAccountId = await resolveAccountId(userId, accountId);
+  const whereClause: any = { userId };
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
+  }
+
   const trades = await Trade.findAll({
-    where: { userId },
+    where: whereClause,
     order: [["openTime", "ASC"]],
   });
 
@@ -273,8 +309,13 @@ export const getErrorDetection = async (userId: string) => {
   return Object.values(errors).sort((a, b) => b.count - a.count);
 };
 
-export const getBehavioralAnalysis = async (userId: string, startDate?: string, endDate?: string) => {
+export const getBehavioralAnalysis = async (userId: string, startDate?: string, endDate?: string, accountId?: string) => {
+  const targetAccountId = await resolveAccountId(userId, accountId);
   const whereClause: any = { userId };
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
+  }
+
   if (startDate || endDate) {
     whereClause.openTime = {};
     if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);
@@ -401,8 +442,13 @@ export const getBehavioralAnalysis = async (userId: string, startDate?: string, 
   };
 };
 
-export const getBehaviorFlow = async (userId: string, startDate?: string, endDate?: string) => {
+export const getBehaviorFlow = async (userId: string, startDate?: string, endDate?: string, accountId?: string) => {
+  const targetAccountId = await resolveAccountId(userId, accountId);
   const whereClause: any = { userId };
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
+  }
+
   if (startDate || endDate) {
     whereClause.openTime = {};
     if (startDate) whereClause.openTime[Op.gte] = new Date(startDate);

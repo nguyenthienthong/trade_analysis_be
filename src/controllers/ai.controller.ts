@@ -16,11 +16,32 @@ export const chat = async (req: Request, res: Response) => {
       return;
     }
 
-    const reply = await aiBrainService.chatWithBrain(userId, message, symbol);
-    res.status(200).json({ reply });
+    const stream = await aiBrainService.chatWithBrainStream(userId, message, symbol);
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
+
+    let fullText = "";
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        fullText += chunk.text;
+        res.write(chunk.text);
+      }
+    }
+    
+    res.end();
+
+    // Store context after stream ends
+    await aiBrainService.storeChatContext(userId, message, fullText);
+
   } catch (error: any) {
     console.error("Error in AI chat controller:", error);
-    res.status(500).json({ message: error.message || "Failed to process AI chat" });
+    // Nếu chưa gửi header thì mới response JSON lỗi
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message || "Failed to process AI chat" });
+    } else {
+      res.end("\n[Error processing request]");
+    }
   }
 };
 

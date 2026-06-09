@@ -34,3 +34,36 @@ export const getUserAccounts = async (req: Request, res: Response) => {
     res.status(400).json({ message: e.message });
   }
 };
+
+export const setDefaultAccount = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const { id } = req.params;
+    const account = await accountService.setDefaultAccount(userId, id);
+    res.status(200).json(account);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const { id } = req.params;
+    const result = await accountService.deleteAccount(userId, id);
+    res.status(200).json(result);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+

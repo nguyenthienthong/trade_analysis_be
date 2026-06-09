@@ -7,12 +7,29 @@ import { QueryTypes } from "sequelize";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
+ * Hàm tính độ tương đồng Cosine Similarity
+ */
+const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
+  if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+};
+
+/**
  * Tạo vector embedding từ văn bản
  */
 export const generateEmbedding = async (text: string): Promise<number[]> => {
   try {
     const response = await ai.models.embedContent({
-      model: "text-embedding-004",
+      model: "gemini-embedding-2",
       contents: text,
     });
     
@@ -27,7 +44,7 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
 };
 
 /**
- * Lưu trữ hoặc cập nhật ngữ cảnh vào Vector Database
+ * Lưu trữ hoặc cập nhật ngữ cảnh vào Vector Database (Thay thế bằng Postgres Array thường)
  */
 export const storeContext = async (
   userId: string,
@@ -37,7 +54,6 @@ export const storeContext = async (
   try {
     const embedding = await generateEmbedding(content);
     
-    // Xóa context cũ cùng loại nếu là profile (để luôn giữ 1 profile mới nhất)
     if (type === "profile") {
       await AIContext.destroy({ where: { userId, type: "profile" } });
     }
@@ -57,7 +73,7 @@ export const storeContext = async (
 };
 
 /**
- * Truy xuất các ngữ cảnh liên quan nhất dựa trên Cosine Similarity
+ * Truy xuất các ngữ cảnh liên quan nhất dựa trên Cosine Similarity (Tính toán in-memory JS)
  */
 export const retrieveRelevantContext = async (
   userId: string,
@@ -66,27 +82,18 @@ export const retrieveRelevantContext = async (
 ): Promise<AIContext[]> => {
   try {
     const queryEmbedding = await generateEmbedding(query);
-    const embeddingString = `[${queryEmbedding.join(",")}]`;
 
-    // Sử dụng toán tử <=> của pgvector cho Cosine Distance
-    // Cosine Distance = 1 - Cosine Similarity
-    // ORDER BY <=> sẽ ưu tiên những vector có distance thấp nhất (Similarity cao nhất)
-    const querySql = `
-      SELECT id, type, content, "createdAt"
-      FROM ai_contexts
-      WHERE "userId" = :userId
-      ORDER BY embedding <=> :embedding::vector
-      LIMIT :limit
-    `;
+    const contexts = await AIContext.findAll({ where: { userId } });
+    if (!contexts || contexts.length === 0) return [];
 
-    const results = await sequelize.query(querySql, {
-      replacements: { userId, embedding: embeddingString, limit },
-      type: QueryTypes.SELECT,
-      model: AIContext,
-      mapToModel: true,
+    const similarities = contexts.map((ctx) => {
+      const sim = cosineSimilarity(queryEmbedding, ctx.embedding || []);
+      return { ctx, sim };
     });
 
-    return results as AIContext[];
+    similarities.sort((a, b) => b.sim - a.sim);
+    
+    return similarities.slice(0, limit).map((item) => item.ctx);
   } catch (error) {
     console.error("Error retrieving context:", error);
     return [];

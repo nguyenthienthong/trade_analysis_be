@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   createAccount,
   getUserAccounts,
+  setDefaultAccount,
+  deleteAccount,
 } from "../controllers/account.controller";
 import authMiddleware from "../middlewares/auth.middleware";
 
@@ -66,5 +68,7 @@ router.post("/", authMiddleware, createAccount);
  *         description: Unauthorized
  */
 router.get("/", authMiddleware, getUserAccounts);
+router.patch("/:id/default", authMiddleware, setDefaultAccount);
+router.delete("/:id", authMiddleware, deleteAccount);
 
 export default router;

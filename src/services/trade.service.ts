@@ -1,4 +1,5 @@
 import { Trade } from "../models/trade.model";
+import { Account } from "../models/account.model";
 import { Emotion } from "../models/emotion.model";
 import { Tag } from "../models/tag.model";
 import { TradeSetup } from "../models/trade-setup.model";
@@ -36,8 +37,18 @@ export const getUserTrades = async ({
     whereClause.symbol = { [Op.iLike]: `%${symbol}%` }; // or Op.like depending on DB, postgres uses iLike
   }
 
-  if (accountId) {
-    whereClause.accountId = accountId;
+  let targetAccountId = accountId;
+  if (!targetAccountId) {
+    const defaultAccount = await Account.findOne({
+      where: { user_id: userId, is_default: true }
+    });
+    if (defaultAccount) {
+      targetAccountId = defaultAccount.id;
+    }
+  }
+
+  if (targetAccountId && targetAccountId !== 'all') {
+    whereClause.accountId = targetAccountId;
   }
 
   if (startDate || endDate) {

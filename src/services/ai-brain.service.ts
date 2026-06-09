@@ -104,9 +104,9 @@ ${userMessage}
 
 /**
  * 3. Chat Handler
- * Xử lý tin nhắn của user, gọi LLM và lưu cả câu hỏi & câu trả lời thành Vector
+ * Xử lý tin nhắn của user, gọi LLM và trả về luồng dữ liệu (Stream)
  */
-export const chatWithBrain = async (
+export const chatWithBrainStream = async (
   userId: string,
   userMessage: string,
   symbol?: string
@@ -114,16 +114,23 @@ export const chatWithBrain = async (
   // Xây dựng prompt thông minh
   const prompt = await buildPrompt(userId, userMessage, symbol);
 
-  // Gọi LLM
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+  // Gọi LLM (Dùng gemini-2.5-flash-lite để tránh bị lỗi 503 và 429)
+  const responseStream = await ai.models.generateContentStream({
+    model: "gemini-2.5-flash-lite",
     contents: prompt,
   });
 
-  const aiReply = response.text || "No response generated.";
+  return responseStream;
+};
 
-  // Lưu lịch sử dưới dạng Vector
-  await storeContext(userId, "chat", `User asked: ${userMessage}\nAI answered: ${aiReply}`);
-
-  return aiReply;
+export const storeChatContext = async (
+  userId: string,
+  userMessage: string,
+  aiReply: string
+) => {
+  try {
+    await storeContext(userId, "chat", `User asked: ${userMessage}\nAI answered: ${aiReply}`);
+  } catch (e) {
+    console.error("Lỗi khi lưu ngữ cảnh chat:", e);
+  }
 };
