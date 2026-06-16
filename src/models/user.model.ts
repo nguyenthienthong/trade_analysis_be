@@ -29,6 +29,7 @@ export class User extends Model {
   @Column(DataType.TEXT)
   plan!: string;
 
+  @AllowNull(true)
   @Column(DataType.TEXT)
   refresh_token!: string;
 
