@@ -8,6 +8,7 @@ import {
   IsEmail,
   Unique,
   CreatedAt,
+  AllowNull,
 } from "sequelize-typescript";
 
 @Table({ tableName: "users", underscored: true, timestamps: true })
