@@ -29,6 +29,9 @@ export class User extends Model {
   @Column(DataType.TEXT)
   plan!: string;
 
+  @Column(DataType.TEXT)
+  refresh_token!: string;
+
   @CreatedAt
   created_at!: Date;
 }

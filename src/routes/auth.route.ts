@@ -56,8 +56,39 @@ router.post("/register", controller.register);
  *                 type: string
  *     responses:
  *       200:
- *         description: JWT token
+ *         description: JWT tokens
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
  */
 router.post("/login", controller.login);
+
+/**
+ * @swagger
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New JWT tokens
+ */
+router.post("/refresh-token", controller.refreshToken);
 
 export default router;

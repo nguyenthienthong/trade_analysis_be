@@ -14,6 +14,6 @@ export default (req: AuthRequest, res: Response, next: NextFunction) => {
     req.user = jwt.verify(token, process.env.JWT_SECRET as string);
     next();
   } catch {
-    res.sendStatus(403);
+    res.sendStatus(401);
   }
 };
