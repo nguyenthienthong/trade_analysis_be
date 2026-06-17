@@ -99,6 +99,10 @@ export const getOHLCV = async (
 
     const res = await fetch(url);
     if (!res.ok) {
+      if (res.status === 451) {
+        console.warn(`Binance API restricted (451). Falling back to Bybit for OHLCV of ${symbol}`);
+        return getOHLCV(symbol, interval, limit, "bybit", isFutures);
+      }
       throw new Error(`Binance API returned status ${res.status}: ${await res.text()}`);
     }
     const data = (await res.json()) as any[];
@@ -281,6 +285,9 @@ export const getFundingRate = async (
       const premium = (await premiumRes.json()) as any;
       currentRate = Number(premium.lastFundingRate) || 0;
       nextFundingTime = Number(premium.nextFundingTime) || 0;
+    } else if (premiumRes.status === 451) {
+      console.warn(`Binance API restricted (451). Falling back to Bybit for Funding Rate of ${symbol}`);
+      return getFundingRate(symbol, limit, "bybit");
     }
 
     // Historical Funding Rate
@@ -424,6 +431,9 @@ export const getOpenInterest = async (
       const currentObj = (await currentRes.json()) as any;
       currentOI = Number(currentObj.openInterest) || 0;
       currentOITime = Number(currentObj.time) || Date.now();
+    } else if (currentRes.status === 451) {
+      console.warn(`Binance API restricted (451). Falling back to Bybit for Open Interest of ${symbol}`);
+      return getOpenInterest(symbol, interval, limit, "bybit");
     }
 
     // Historical Open Interest
