@@ -17,7 +17,18 @@ import { TradeEmotion } from "./trade-emotion.model";
 import { TradeTag } from "./trade-tag.model";
 import { TradeImage } from "./trade-image.model";
 
-@Table({ tableName: "trades", underscored: true, timestamps: false })
+@Table({ 
+  tableName: "trades", 
+  underscored: true, 
+  timestamps: false,
+  indexes: [
+    {
+      unique: true,
+      name: 'uniq_trade_import',
+      fields: ['account_id', 'symbol', 'side', 'entry_price', 'quantity', 'open_time']
+    }
+  ]
+})
 export class Trade extends Model {
   @PrimaryKey
   @Default(DataType.UUIDV4)

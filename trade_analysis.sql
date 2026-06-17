@@ -418,7 +418,7 @@ CREATE INDEX idx_trades_user_time ON public.trades USING btree (user_id, open_ti
 -- Name: uniq_trade_import; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE UNIQUE INDEX uniq_trade_import ON public.trades USING btree (symbol, side, entry_price, quantity, open_time);
+CREATE UNIQUE INDEX uniq_trade_import ON public.trades USING btree (account_id, symbol, side, entry_price, quantity, open_time);
 
 
 --
