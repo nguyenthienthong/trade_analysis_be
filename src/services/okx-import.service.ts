@@ -227,7 +227,7 @@ export const importOkxCsv = async (
 
   const trades = buildTradesFromRows(rows, userId, accountId);
 
-  await Trade.bulkCreate(trades);
+  await Trade.bulkCreate(trades, { ignoreDuplicates: true });
 };
 
 export const parseOkxCsv = (filePath: string) => {

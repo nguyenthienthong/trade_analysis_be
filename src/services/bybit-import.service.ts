@@ -229,7 +229,7 @@ export const importBybitCsv = async (
 
   const trades = buildTradesFromRows(rows, userId, accountId);
 
-  await Trade.bulkCreate(trades);
+  await Trade.bulkCreate(trades, { ignoreDuplicates: true });
 };
 
 export const parseBybitCsv = (filePath: string) => {
