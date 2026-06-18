@@ -97,13 +97,19 @@ export const getOHLCV = async (
       : "https://api.binance.com/api/v3/klines";
     const url = `${baseUrl}?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}`;
 
-    const res = await fetch(url);
-    if (!res.ok) {
-      if (res.status === 451) {
-        console.warn(`Binance API restricted (451). Falling back to Bybit for OHLCV of ${symbol}`);
-        return getOHLCV(symbol, interval, limit, "bybit", isFutures);
+    let res;
+    try {
+      res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 451 || res.status === 403 || res.status >= 500) {
+          console.warn(`Binance API restricted or failed (${res.status}). Falling back to Bybit for OHLCV of ${symbol}`);
+          return getOHLCV(symbol, interval, limit, "bybit", isFutures);
+        }
+        throw new Error(`Binance API returned status ${res.status}: ${await res.text()}`);
       }
-      throw new Error(`Binance API returned status ${res.status}: ${await res.text()}`);
+    } catch (e: any) {
+      console.warn(`Binance fetch failed (${e.message}). Falling back to Bybit for OHLCV of ${symbol}`);
+      return getOHLCV(symbol, interval, limit, "bybit", isFutures);
     }
     const data = (await res.json()) as any[];
 
@@ -277,16 +283,21 @@ export const getFundingRate = async (
   } else {
     // Binance Futures
     const premiumUrl = `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol.toUpperCase()}`;
-    const premiumRes = await fetch(premiumUrl);
     let currentRate = 0;
     let nextFundingTime = 0;
 
-    if (premiumRes.ok) {
-      const premium = (await premiumRes.json()) as any;
-      currentRate = Number(premium.lastFundingRate) || 0;
-      nextFundingTime = Number(premium.nextFundingTime) || 0;
-    } else if (premiumRes.status === 451) {
-      console.warn(`Binance API restricted (451). Falling back to Bybit for Funding Rate of ${symbol}`);
+    try {
+      const premiumRes = await fetch(premiumUrl);
+      if (premiumRes.ok) {
+        const premium = (await premiumRes.json()) as any;
+        currentRate = Number(premium.lastFundingRate) || 0;
+        nextFundingTime = Number(premium.nextFundingTime) || 0;
+      } else if (premiumRes.status === 451 || premiumRes.status === 403 || premiumRes.status >= 500) {
+        console.warn(`Binance API restricted (${premiumRes.status}). Falling back to Bybit for Funding Rate of ${symbol}`);
+        return getFundingRate(symbol, limit, "bybit");
+      }
+    } catch (e: any) {
+      console.warn(`Binance fetch failed (${e.message}). Falling back to Bybit for Funding Rate of ${symbol}`);
       return getFundingRate(symbol, limit, "bybit");
     }
 
@@ -423,16 +434,21 @@ export const getOpenInterest = async (
   } else {
     // Binance Futures
     const currentUrl = `https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol.toUpperCase()}`;
-    const currentRes = await fetch(currentUrl);
     let currentOI = 0;
     let currentOITime = Date.now();
 
-    if (currentRes.ok) {
-      const currentObj = (await currentRes.json()) as any;
-      currentOI = Number(currentObj.openInterest) || 0;
-      currentOITime = Number(currentObj.time) || Date.now();
-    } else if (currentRes.status === 451) {
-      console.warn(`Binance API restricted (451). Falling back to Bybit for Open Interest of ${symbol}`);
+    try {
+      const currentRes = await fetch(currentUrl);
+      if (currentRes.ok) {
+        const currentObj = (await currentRes.json()) as any;
+        currentOI = Number(currentObj.openInterest) || 0;
+        currentOITime = Number(currentObj.time) || Date.now();
+      } else if (currentRes.status === 451 || currentRes.status === 403 || currentRes.status >= 500) {
+        console.warn(`Binance API restricted (${currentRes.status}). Falling back to Bybit for Open Interest of ${symbol}`);
+        return getOpenInterest(symbol, interval, limit, "bybit");
+      }
+    } catch (e: any) {
+      console.warn(`Binance fetch failed (${e.message}). Falling back to Bybit for Open Interest of ${symbol}`);
       return getOpenInterest(symbol, interval, limit, "bybit");
     }
 
